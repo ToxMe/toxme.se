@@ -7,16 +7,16 @@ import struct
 
 NAME_LIMIT_HARD = 63
 
-A = ord("A")
-Z = ord("Z")
-a = ord("a")
-z = ord("z")
-ZERO = ord("0")
-FIVE = ord("5")
+ch_A = ord("A")
+ch_Z = ord("Z")
+ch_a = ord("a")
+ch_z = ord("z")
+ch_ZERO = ord("0")
+ch_FIVE = ord("5")
 
-ir1 = lambda c: c <= Z and c >= A
-ir2 = lambda c: c <= z and c >= a
-ir3 = lambda c: c <= FIVE and c >= ZERO
+ir1 = lambda c: c <= ch_Z and c >= ch_A
+ir2 = lambda c: c <= ch_z and c >= ch_a
+ir3 = lambda c: c <= ch_FIVE and c >= ch_ZERO
 BASE32_SRC = b"abcdefghijklmnopqrstuvwxyz012345"
 
 # q: why not use python's base64 module?
@@ -91,7 +91,6 @@ class ToxResolver(dnslib.server.BaseResolver):
                              self.ttl)
 
     def resolve(self, request, handler):
-        print(repr(request.get_q().qtype))
         question = request.get_q()
         req_name = str(question.get_qname())
         # TXT = 16
@@ -103,6 +102,10 @@ class ToxResolver(dnslib.server.BaseResolver):
             return reply
 
         if question.qtype == 16:
+            if req_name == suffix[1:]:
+                reply.add_answer(dnslib.RR(req_name, 16, ttl=0,
+                    rdata=dnslib.TXT(self.cryptocore.public_key.encode("ascii"))))
+                return reply
             if not req_name.endswith(suffix):
                 reply.header.rcode = dnslib.RCODE.NXDOMAIN
                 return reply
@@ -134,7 +137,7 @@ class ToxResolver(dnslib.server.BaseResolver):
                 msg = binascii.unhexlify(r_payload)
                 nonce_reply = b[:4] + b"\x01" + (b"\0" * 19)
                 ct = self.cryptocore.dsrec_encrypt_key(ck, nonce_reply, msg)
-                
+
                 key_part = notsecure32_encode(ct)
                 reply.add_answer(dnslib.RR(req_name, 16, ttl=0,
                                  rdata=dnslib.TXT(b"".join((base, key_part)))))
