@@ -31,11 +31,11 @@ def notsecure32_decode(src):
     op = 0
     for char in (ord(s) for s in src):
         if ir1(char):
-            char -= A
+            char -= ch_A
         elif ir2(char):
-            char -= a
+            char -= ch_a
         elif ir3(char):
-            char = (char - ZERO + 26)
+            char = (char - ch_ZERO + 26)
         else:
             raise ValueError("this is an error apparently")
 
