@@ -113,7 +113,7 @@ class CryptoCore(object):
         box = public.Box(self.pkey, public.PublicKey(client))
         by = box.encrypt(msg, nonce)
         return by[24:]
-        
+
 #pragma mark - web
 
 CONSONANTS = "bcdfghjklmnpqrstvwxyz"
@@ -137,7 +137,7 @@ class HTTPSPolicyEnforcer(tornado.web.RequestHandler):
 
 class APIHandler(tornado.web.RequestHandler):
     RETURNS_JSON = 1
-    
+
     @staticmethod
     def _typecheck_dict(envelope, expect):
         for key, value in expect.items():
@@ -198,7 +198,7 @@ class APIHandler(tornado.web.RequestHandler):
                 self.set_status(400)
                 self.json_payload(error_codes.ERROR_DUPE_ID)
                 return 0
-        
+
             session, mus = dbc.get_ig(name, session)
             if not mus:
                 mus = database.User()
@@ -207,7 +207,7 @@ class APIHandler(tornado.web.RequestHandler):
                 self.set_status(400)
                 self.json_payload(error_codes.ERROR_NAME_TAKEN)
                 return 0
-        
+
             mus.name = name
             mus.public_key = pub
             mus.checksum = check
@@ -242,12 +242,12 @@ class APIUpdateName(APIHandler):
         ctr["counter"][self.request.remote_ip] += 1
         # Clears in one hour
         ctr["clear_date"][self.request.remote_ip] = time.time() + 3600
-        
+
         if ctr["counter"][self.request.remote_ip] > THROTTLE_THRESHOLD:
             self.set_status(400)
             self.write(error_codes.ERROR_RATE_LIMIT)
             return
-        
+
         clear = self._encrypted_payload_prologue(self.envelope)
         if not clear:
             return
@@ -265,14 +265,23 @@ class APIUpdateName(APIHandler):
         bio = REMOVE_NEWLINES.sub(" ", clear["bio"].strip())
         ctime = int(time.time())
 
+        input_error = 0
+
         if (not VALID_ID.match(id_)
-            or not set(name).isdisjoint(DISALLOWED_CHARS)
             or abs(ctime - clear["timestamp"]) > 300
-            or name in DISALLOWED_NAMES
             or len(name) > NAME_LIMIT_HARD
             or len(bio) > BIO_LIMIT):
+            input_error = error_codes.ERROR_BAD_PAYLOAD
+
+        if not set(name).isdisjoint(DISALLOWED_CHARS):
+            input_error = error_codes.ERROR_INVALID_CHAR
+
+        if name in DISALLOWED_NAMES:
+            input_error = error_codes.ERROR_INVALID_NAME
+
+        if input_error:
             self.set_status(400)
-            self.json_payload(error_codes.ERROR_BAD_PAYLOAD)
+            self.json_payload(input_error)
             return
 
         pub, pin, check = id_[:64], id_[64:72], id_[72:]
@@ -482,12 +491,12 @@ class FindFriends(tornado.web.RequestHandler):
                     next_page=(None if len(results) < ENTRIES_PER_PAGE
                                     else num + 1),
                     previous_page=(num - 1) if num > 0 else None)
-    
+
     def get(self, page):
         if self.request.protocol != "https":
             self.write(error_codes.ERROR_NOTSECURE)
             return
-        
+
         return self._render_page(page)
 
 class EditKeyWeb(APIHandler):
@@ -503,7 +512,7 @@ class EditKeyWeb(APIHandler):
         if self.request.protocol != "https":
             self.json_payload(error_codes.ERROR_NOTSECURE)
             return
-    
+
         ctr = self.settings["address_ctr"][ACTION_PUBLISH]
         if ctr["clear_date"][self.request.remote_ip] < time.time():
             del ctr["counter"][self.request.remote_ip]
@@ -511,11 +520,11 @@ class EditKeyWeb(APIHandler):
         ctr["counter"][self.request.remote_ip] += 1
         # Clears in one hour
         ctr["clear_date"][self.request.remote_ip] = time.time() + 3600
-    
+
         if ctr["counter"][self.request.remote_ip] > THROTTLE_THRESHOLD:
             self.set_status(400)
             return
-    
+
         name = self.get_body_argument("name", "").lower()
         password = self.get_body_argument("password", "").lower()
         rec = self.settings["local_store"].get(name)
@@ -546,7 +555,7 @@ class EditKeyWeb(APIHandler):
             return
         privacy = 0 if self.get_body_argument("privacy", "off") == "on" else 1
         lock = 1 if self.get_body_argument("lock", "off") == "on" else 0
-    
+
         pkey = toxid[:64]
         pin = toxid[64:72]
         check = toxid[72:]
@@ -589,7 +598,7 @@ class AddKeyWeb(APIHandler):
         if (not DISALLOWED_CHARS.isdisjoint(set(name))
             or name in DISALLOWED_NAMES):
             self.set_status(400)
-            self.json_payload(error_codes.ERROR_BAD_PAYLOAD)
+            self.json_payload(error_codes.ERROR_INVALID_CHAR)
             return
 
         bio = self.get_body_argument("bio", "")

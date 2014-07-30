@@ -22,7 +22,12 @@ ERROR_NAME_TAKEN = {"c": -25}
 # The public key given is bound to a name already.
 ERROR_DUPE_ID = {"c": -26}
 
+# No spaces allowed.
+ERROR_INVALID_CHAR = {"c": -27}
+
 ERROR_BAD_PASSWORD = {"c": -28}
+
+ERROR_INVALID_NAME = {"c": -29}
 
 # Lookup failed because of an error on the other domain's side.
 ERROR_LOOKUP_FAILED = {"c": -41}
@@ -43,7 +48,9 @@ DESCRIPTIONS = {
     -4: "You're making too many requests. Wait an hour and try again.",
     -25: "This name is already in use.",
     -26: "This Tox ID is already registered under another name.",
+    -27: "Please don't use a space in your name.",
     -28: "Password incorrect.",
+    -29: "You can't use this name.",
     -41: "Lookup failed because the other server replied with invalid data.",
     -42: "That user does not exist.",
     -43: "Internal lookup error. Please file a bug.",
