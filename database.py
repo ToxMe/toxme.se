@@ -114,8 +114,10 @@ class Database(object):
         self.lock = threading.RLock()
         self.cached_first_page = None
         self.cached_page_count = None
+        self.cached_user_count = None
 
     def late_init(self):
+        self.requests_serviced = 0
         self.dbc = sqlalchemy.create_engine(self.backing, echo=self.should_echo)
         BASE.metadata.create_all(self.dbc)
         self.gs = sqlalchemy.orm.sessionmaker(bind=self.dbc)
@@ -142,6 +144,7 @@ class Database(object):
         return prefetch
 
     def get(self, name):
+        self.requests_serviced += 1
         e = self.presence_cache.get(name, -1)
         return e if e != -1 else self._cache_entity_sel(name)
 
@@ -152,6 +155,10 @@ class Database(object):
             return records
         else:
             return self.cached_first_page
+
+    def count_users(self):
+        return (self.cached_user_count if self.cached_user_count is not None
+                                       else self.count_users_ig())
 
     def count_pages(self, length):
         return (self.cached_page_count if self.cached_page_count is not None
@@ -173,6 +180,8 @@ class Database(object):
         finally:
             s.close()
         self.cached_first_page = None
+        self.cached_page_count = None
+        self.cached_user_count = None
         return 1
 
     def get_ig(self, name, sess=None):
@@ -203,6 +212,11 @@ class Database(object):
         self.cached_page_count = math.ceil(float(count) / length)
         return self.cached_page_count
 
+    def count_users_ig(self):
+        sess = self.gs()
+        self.cached_user_count = sess.query(User).count()
+        return self.cached_user_count
+
     def iterate_all_users(self, mutates=0):
         sess = self.gs()
         results = sess.query(User)
@@ -218,3 +232,5 @@ class Database(object):
         sess.commit()
         sess.close()
         self.cached_first_page = None
+        self.cached_page_count = None
+        self.cached_user_count = None

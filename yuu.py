@@ -40,7 +40,9 @@ LOGGER = logging.getLogger("yuu")
 ACTION_PUBLISH   = 1
 ACTION_UNPUBLISH = 2
 ACTION_LOOKUP    = 3
-INVOKABLE_ACTIONS = {ACTION_PUBLISH, ACTION_UNPUBLISH, ACTION_LOOKUP}
+ACTION_STATUS    = 4
+INVOKABLE_ACTIONS = {ACTION_PUBLISH, ACTION_UNPUBLISH, ACTION_LOOKUP,
+                     ACTION_STATUS}
 THROTTLE_THRESHOLD = 5
 
 VALID_KEY = re.compile(r"^[A-Fa-f0-9]{64}$")
@@ -372,6 +374,30 @@ class APILookupID(tornado.web.RequestHandler):
         else:
             self.settings["lookup_core"].dispatch_lookup(name, self._results)
 
+class APIStatus(tornado.web.RequestHandler):
+    def initialize(self, envelope):
+        self.envelope = envelope
+
+    def _results(self, result):
+        self.set_status(200 if result["c"] == 0 else 400)
+        self.write(result)
+        self.finish()
+
+    @staticmethod
+    def fuzz(n):
+        # rounds to hundreds after munging the count a bit
+        n += random.randint(-100, 100)
+        return n if not n % 100 else n + 100 - n % 100
+
+    @tornado.web.asynchronous
+    def post(self):
+        self._results({
+            "c": 0,
+            "ut": int(time.time()) - self.settings["app_startup"],
+            "rs": self.fuzz(self.settings["local_store"].requests_serviced),
+            "uc": self.fuzz(self.settings["local_store"].count_users()),
+        })
+
 class APIFailure(APIHandler):
     def get(self):
         self.set_status(400)
@@ -406,6 +432,8 @@ def _make_handler_for_api_method(application, request, **kwargs):
         return APIReleaseName(application, request, envelope=envelope)
     elif action == ACTION_LOOKUP:
         return APILookupID(application, request, envelope=envelope)
+    elif action == ACTION_STATUS:
+        return APIStatus(application, request, envelope=envelope)
 
 class PublicKey(tornado.web.RequestHandler):
     def get(self):
@@ -666,7 +694,8 @@ def main():
     LOGGER.info("Record sign key: {0}".format(crypto_core.verify_key))
 
     templates_dir = "_".join(("templates", cfg["templates"]))
-    handlers = [("/api", _make_handler_for_api_method),
+    handlers = [
+        ("/api", _make_handler_for_api_method),
         ("/pk", PublicKey),
         (r"/barcode/(.+)\.svg$", CreateQR),
         (r"/u/(.+)?$", LookupAndOpenUser),
@@ -685,6 +714,7 @@ def main():
         lookup_core=lookup_core,
         address_ctr=address_ctr,
         hooks_state=hooks_state,
+        app_startup=int(time.time()),
         home=cfg["registration_domain"],
     )
     server = tornado.httpserver.HTTPServer(app, **{
