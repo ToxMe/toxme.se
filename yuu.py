@@ -387,7 +387,7 @@ class APIStatus(tornado.web.RequestHandler):
     def fuzz(n):
         # rounds to hundreds after munging the count a bit
         n += random.randint(-100, 100)
-        return n if not n % 100 else n + 100 - n % 100
+        return max(0, n if not n % 100 else n + 100 - n % 100)
 
     @tornado.web.asynchronous
     def post(self):
