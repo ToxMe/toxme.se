@@ -11,7 +11,7 @@ Assume all requests are POSTed to /api.
 ### Anonymous APIs:
 ```
 lookup (3): {
-    "a": 3,
+    "action": 3,
     "name": <name>
 }
 ```
