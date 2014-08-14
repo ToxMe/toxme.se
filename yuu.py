@@ -421,7 +421,7 @@ def _make_handler_for_api_method(application, request, **kwargs):
         envelope = json.loads(envelope)
         if envelope.get("action", -1) not in INVOKABLE_ACTIONS:
             raise TypeError("blah blah blah exceptions are flow control")
-    except (UnicodeDecodeError, TypeError):
+    except (UnicodeDecodeError, TypeError, ValueError):
         LOGGER.warn("failing request because of an invalid first payload")
         return APIFailure(application, request, **kwargs)
 
