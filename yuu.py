@@ -53,7 +53,7 @@ DISALLOWED_NAMES = {}
 NAME_LIMIT_HARD  = 63
 BIO_LIMIT        = 250 # fixme this should be configurable
 
-ENTRIES_PER_PAGE = 10
+ENTRIES_PER_PAGE = 30
 
 #pragma mark - crypto
 
