@@ -29,7 +29,7 @@ def _read_tox_cherry(open_file):
     idx = m.find(b"KEYs") + 8
     m.seek(idx)
     bs = m.read(68)
-    
+
     pk = binascii.hexlify(bs[:32]).upper().decode("ascii")
     sk = binascii.hexlify(bs[32:64]).upper().decode("ascii")
     ns = binascii.hexlify(bs[64:]).upper().decode("ascii")
@@ -72,12 +72,12 @@ def push(addr, name, bio, fil):
         "bio": bio.strip(), # Bio (quote displayed on web)
         "timestamp": int(time.time()) # A timestamp near the server's time
     })
-    
+
     k = crypto.PrivateKey(mysec, crypto_encode.HexEncoder)
     nonce = os.urandom(crypto.Box.NONCE_SIZE)
     b = crypto.Box(k, crypto.PublicKey(sk, crypto_encode.HexEncoder))
     msg = b.encrypt(inner.encode("utf8"), nonce, crypto_encode.Base64Encoder)
-    
+
     payload = json.dumps({
         "action": 1, # Action number
         "public_key": mypub, # Public key
@@ -95,7 +95,7 @@ def push(addr, name, bio, fil):
 def del_(addr, fil):
     pkr = requests.get(addr + "/pk", verify=False)
     sk = pkr.json()["key"]
-    
+
     mypub, mysec, nospam = read_tox(fil)
     check = _compute_checksum(mypub + nospam)
     print("kotone: Deleting {0} from server.".format(mypub, check))
@@ -103,12 +103,12 @@ def del_(addr, fil):
         "public_key": mypub, # Public key
         "timestamp": int(time.time()) # Timestamp
     })
-    
+
     k = crypto.PrivateKey(mysec, crypto_encode.HexEncoder)
     nonce = os.urandom(crypto.Box.NONCE_SIZE)
     b = crypto.Box(k, crypto.PublicKey(sk, crypto_encode.HexEncoder))
     msg = b.encrypt(inner.encode("utf8"), nonce, crypto_encode.Base64Encoder)
-    
+
     payload = json.dumps({
         "action": 2,
         "public_key": mypub,
@@ -134,11 +134,11 @@ def r(addr):
     check = _compute_checksum(mypub + nospam)
     print("kotone: Deleting {0} from server.".format(mypub, check))
     inner = json.dumps({
-        "s": mypub + check,
-        "t": int(time.time()),
-        "n": "test-" + str(random.randint(0, 999999999)),
-        "b": "top test :^)",
-        "l": 1,
+        "tox_id": mypub + nospam + check,
+        "timestamp": int(time.time()),
+        "name": "test-" + str(random.randint(0, 999999999)),
+        "bio": "top test :^)",
+        "privacy": 1,
     })
 
     nonce = os.urandom(crypto.Box.NONCE_SIZE)
@@ -146,10 +146,10 @@ def r(addr):
     msg = b.encrypt(inner.encode("utf8"), nonce, crypto_encode.Base64Encoder)
 
     payload = json.dumps({
-        "a": 1,
-        "k": mypub,
-        "e": msg.ciphertext.decode("utf8"),
-        "r": crypto_encode.Base64Encoder.encode(nonce).decode("utf8")
+        "action": 1,
+        "public_key": mypub,
+        "encrypted": msg.ciphertext.decode("utf8"),
+        "nonce": crypto_encode.Base64Encoder.encode(nonce).decode("utf8")
     })
     resp = requests.post(addr + "/api", data=payload, verify=False)
     print(resp.text)
@@ -162,7 +162,7 @@ def r(addr):
 def main():
     invocation, addr, action = sys.argv[:3]
     rest = sys.argv[3:]
-    
+
     if action == "push":
         push(addr, *rest)
     elif action == "delete":

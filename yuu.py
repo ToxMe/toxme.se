@@ -237,18 +237,19 @@ class APIUpdateName(APIHandler):
         self.envelope = envelope
 
     def post(self):
-        ctr = self.settings["address_ctr"][ACTION_PUBLISH]
-        if ctr["clear_date"][self.request.remote_ip] < time.time():
-            del ctr["counter"][self.request.remote_ip]
-            del ctr["clear_date"][self.request.remote_ip]
-        ctr["counter"][self.request.remote_ip] += 1
-        # Clears in one hour
-        ctr["clear_date"][self.request.remote_ip] = time.time() + 3600
+        if self.settings["address_ctr"]:
+            ctr = self.settings["address_ctr"][ACTION_PUBLISH]
+            if ctr["clear_date"][self.request.remote_ip] < time.time():
+                del ctr["counter"][self.request.remote_ip]
+                del ctr["clear_date"][self.request.remote_ip]
+            ctr["counter"][self.request.remote_ip] += 1
+            # Clears in one hour
+            ctr["clear_date"][self.request.remote_ip] = time.time() + 3600
 
-        if ctr["counter"][self.request.remote_ip] > THROTTLE_THRESHOLD:
-            self.set_status(400)
-            self.write(error_codes.ERROR_RATE_LIMIT)
-            return
+            if ctr["counter"][self.request.remote_ip] > THROTTLE_THRESHOLD:
+                self.set_status(400)
+                self.write(error_codes.ERROR_RATE_LIMIT)
+                return
 
         clear = self._encrypted_payload_prologue(self.envelope)
         if not clear:
@@ -541,17 +542,18 @@ class EditKeyWeb(APIHandler):
             self.json_payload(error_codes.ERROR_NOTSECURE)
             return
 
-        ctr = self.settings["address_ctr"][ACTION_PUBLISH]
-        if ctr["clear_date"][self.request.remote_ip] < time.time():
-            del ctr["counter"][self.request.remote_ip]
-            del ctr["clear_date"][self.request.remote_ip]
-        ctr["counter"][self.request.remote_ip] += 1
-        # Clears in one hour
-        ctr["clear_date"][self.request.remote_ip] = time.time() + 3600
+        if self.settings["address_ctr"]:
+            ctr = self.settings["address_ctr"][ACTION_PUBLISH]
+            if ctr["clear_date"][self.request.remote_ip] < time.time():
+                del ctr["counter"][self.request.remote_ip]
+                del ctr["clear_date"][self.request.remote_ip]
+            ctr["counter"][self.request.remote_ip] += 1
+            # Clears in one hour
+            ctr["clear_date"][self.request.remote_ip] = time.time() + 3600
 
-        if ctr["counter"][self.request.remote_ip] > THROTTLE_THRESHOLD:
-            self.set_status(400)
-            return
+            if ctr["counter"][self.request.remote_ip] > THROTTLE_THRESHOLD:
+                self.set_status(400)
+                return
 
         name = self.get_body_argument("name", "").lower()
         password = self.get_body_argument("password", "").lower()
@@ -610,17 +612,18 @@ class AddKeyWeb(APIHandler):
             self.json_payload(error_codes.ERROR_NOTSECURE)
             return
 
-        ctr = self.settings["address_ctr"][ACTION_PUBLISH]
-        if ctr["clear_date"][self.request.remote_ip] < time.time():
-            del ctr["counter"][self.request.remote_ip]
-            del ctr["clear_date"][self.request.remote_ip]
-        ctr["counter"][self.request.remote_ip] += 1
-        # Clears in one hour
-        ctr["clear_date"][self.request.remote_ip] = time.time() + 3600
+        if self.settings["address_ctr"]:
+            ctr = self.settings["address_ctr"][ACTION_PUBLISH]
+            if ctr["clear_date"][self.request.remote_ip] < time.time():
+                del ctr["counter"][self.request.remote_ip]
+                del ctr["clear_date"][self.request.remote_ip]
+            ctr["counter"][self.request.remote_ip] += 1
+            # Clears in one hour
+            ctr["clear_date"][self.request.remote_ip] = time.time() + 3600
 
-        if ctr["counter"][self.request.remote_ip] > THROTTLE_THRESHOLD:
-            self.set_status(400)
-            return
+            if ctr["counter"][self.request.remote_ip] > THROTTLE_THRESHOLD:
+                self.set_status(400)
+                return
 
         name = self.get_body_argument("name", "").lower()
         if (not DISALLOWED_CHARS.isdisjoint(set(name))
@@ -687,8 +690,12 @@ def main():
         hooks_state = None
 
     # an interesting object structure
-    address_ctr = {ACTION_PUBLISH: {"counter": Counter(),
-                                    "clear_date": defaultdict(lambda: 0)}}
+    if cfg["sandbox"] == 0:
+        address_ctr = {ACTION_PUBLISH: {"counter": Counter(),
+                                        "clear_date": defaultdict(lambda: 0)}}
+    else:
+        LOGGER.info("Running in sandbox mode, limits are disabled.")
+        address_ctr = None
 
     LOGGER.info("API public key: {0}".format(crypto_core.public_key))
     LOGGER.info("Record sign key: {0}".format(crypto_core.verify_key))
