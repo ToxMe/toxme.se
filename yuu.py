@@ -43,7 +43,7 @@ ACTION_LOOKUP    = 3
 ACTION_STATUS    = 4
 INVOKABLE_ACTIONS = {ACTION_PUBLISH, ACTION_UNPUBLISH, ACTION_LOOKUP,
                      ACTION_STATUS}
-THROTTLE_THRESHOLD = 5
+THROTTLE_THRESHOLD = 10
 
 VALID_KEY = re.compile(r"^[A-Fa-f0-9]{64}$")
 VALID_ID  = re.compile(r"^[A-Fa-f0-9]{76}$")
@@ -53,7 +53,7 @@ DISALLOWED_NAMES = {}
 NAME_LIMIT_HARD  = 63
 BIO_LIMIT        = 250 # fixme this should be configurable
 
-ENTRIES_PER_PAGE = 10
+ENTRIES_PER_PAGE = 13
 
 #pragma mark - crypto
 
