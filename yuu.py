@@ -153,6 +153,7 @@ class APIHandler(tornado.web.RequestHandler):
                                                "encrypted": str}):
             self.set_status(400)
             self.json_payload(error_codes.ERROR_BAD_PAYLOAD)
+            LOGGER.warn("Unable to read payload")
             return
         try:
             other_key = public.PublicKey(envelope["public_key"], KEY_ENC)
@@ -260,6 +261,7 @@ class APIUpdateName(APIHandler):
                                             "bio": str}):
             self.set_status(400)
             self.write(error_codes.ERROR_BAD_PAYLOAD)
+            LOGGER.warn("encrypted payload incorrect")
             return
 
         auth = self.envelope["public_key"].upper()
@@ -275,6 +277,7 @@ class APIUpdateName(APIHandler):
             or len(name) > NAME_LIMIT_HARD
             or len(bio) > BIO_LIMIT):
             input_error = error_codes.ERROR_BAD_PAYLOAD
+            LOGGER.warn("Size limit reached")
 
         if not set(name).isdisjoint(DISALLOWED_CHARS):
             input_error = error_codes.ERROR_INVALID_CHAR
@@ -320,6 +323,7 @@ class APIReleaseName(APIHandler):
             or abs(ctime - clear.get("timestamp", 0)) > 300):
             self.set_status(400)
             self.json_payload(error_codes.ERROR_BAD_PAYLOAD)
+            LOGGER.warn("Invalid timestamp")
             return
 
         rec = self.settings["local_store"].get_by_id_ig(pk)[1]
@@ -364,6 +368,7 @@ class APILookupID(tornado.web.RequestHandler):
         if not name or name.endswith("@") or name.startswith("@"):
             self.set_status(400)
             self.write(error_codes.ERROR_BAD_PAYLOAD)
+            LOGGER.warn("Name invalid")
             self.finish()
             return
         if "@" not in name:
@@ -567,6 +572,7 @@ class EditKeyWeb(APIHandler):
         if action not in {"Delete", "Update"}:
             self.set_status(400)
             self.json_payload(error_codes.ERROR_BAD_PAYLOAD)
+            LOGGER.warn("Invalid action")
             return
         elif action == "Delete":
             self.settings["local_store"].delete_pk(rec.public_key)
@@ -577,11 +583,13 @@ class EditKeyWeb(APIHandler):
         if len(bio) > BIO_LIMIT:
             self.set_status(400)
             self.json_payload(error_codes.ERROR_BAD_PAYLOAD)
+            LOGGER.warn("bio size over limit")
             return
         toxid = (self.get_body_argument("tox_id", "") or rec.tox_id()).upper()
         if not VALID_ID.match(toxid):
             self.set_status(400)
             self.json_payload(error_codes.ERROR_BAD_PAYLOAD)
+            LOGGER.warn("Invalid checksum")
             return
         privacy = 0 if self.get_body_argument("privacy", "off") == "on" else 1
         lock = 1 if self.get_body_argument("lock", "off") == "on" else 0
@@ -592,6 +600,7 @@ class EditKeyWeb(APIHandler):
         if CryptoCore.compute_checksum("".join((pkey, pin))) != check:
             self.set_status(400)
             self.json_payload(error_codes.ERROR_BAD_PAYLOAD)
+            LOGGER.warn("Invalid checksum")
             return
 
         if self.update_db_entry(rec.public_key, name, pkey, bio, check, privacy, pin):
@@ -636,12 +645,14 @@ class AddKeyWeb(APIHandler):
         if len(bio) > BIO_LIMIT:
             self.set_status(400)
             self.json_payload(error_codes.ERROR_BAD_PAYLOAD)
+            LOGGER.warn("Missing bio")
             return
 
         toxid = self.get_body_argument("tox_id", "").upper()
         if not VALID_ID.match(toxid):
             self.set_status(400)
             self.json_payload(error_codes.ERROR_BAD_PAYLOAD)
+            LOGGER.warn("invalid Tox ID")
             return
 
         privacy = 0 if self.get_body_argument("privacy", "off") == "on" else 1
@@ -653,6 +664,7 @@ class AddKeyWeb(APIHandler):
         if CryptoCore.compute_checksum("".join((pkey, pin))) != check:
             self.set_status(400)
             self.json_payload(error_codes.ERROR_BAD_PAYLOAD)
+            LOGGER.warn("Checksum error")
             return
 
         old_rec = self.settings["local_store"].get(name)
