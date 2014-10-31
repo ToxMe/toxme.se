@@ -133,3 +133,10 @@ td#lu_user_sig.bad::before {
         width:55px;
     }
 }
+
+.browserupgrade {
+margin: 0.2em 0;
+background: #ccc;
+color: #000;
+padding: 0.2em 0;
+}
