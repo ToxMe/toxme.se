@@ -173,6 +173,7 @@ td#lu_user_sig.bad::before {
     display:inline-block;
     margin-bottom:0;
     font-size:20px;
+    min-width:30px;
 }
 .user_entry .quote.notext {
     color:#7e8c99;
