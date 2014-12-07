@@ -6,7 +6,6 @@
          url('/fonts/Lato-Light.ttf') format('truetype');
     font-style: normal;
     font-weight: normal;
-    text-rendering: optimizeLegibility;
 }
 
 @font-face {
@@ -17,7 +16,6 @@
          url('/fonts/Lato-Bold.ttf') format('truetype');
     font-style: normal;
     font-weight: bold;
-    text-rendering: optimizeLegibility;
 }
 
 @font-face {
@@ -28,7 +26,6 @@
          url('/fonts/Lato-Regular.ttf') format('truetype');
     font-style: normal;
     font-weight: normal;
-    text-rendering: optimizeLegibility;
 }
 
 @font-face {
@@ -39,7 +36,6 @@
          url('/fonts/Lato-Italic.ttf') format('truetype');
     font-style: italic;
     font-weight: normal;
-    text-rendering: optimizeLegibility;
 }
 
 body {
