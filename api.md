@@ -81,6 +81,10 @@ ERROR_BAD_PAYLOAD = {"c": -3}
 ERROR_NAME_TAKEN = {"c": -25}
 # The public key given is bound to a name already.
 ERROR_DUPE_ID = {"c": -26}
+#name not found
+ERROR_UNKNOWN_NAME = {"c": -30}
+#sent invalid data in place of an ID
+ERROR_INVALID_ID = {"c": -31}
 # Lookup failed because of an error on the other domain's side.
 ERROR_LOOKUP_FAILED = {"c": -41}
 # Lookup failed because that user doesn't exist on the domain
