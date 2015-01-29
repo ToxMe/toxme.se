@@ -18,6 +18,14 @@ lookup (3): {
 Where <name> is a name[@domain.com] ID. If the domain part is omittted, the 
 server decides where to look up.
 
+```
+reverse lookup (5): {
+    "action": 5,
+    "id": <name>
+}
+```
+Where ID is a Tox ID. If the ID exists and the account associated with it is not marked private a name will be returned.
+
 ### "Authenticated" APIs:
 
 "Authenticated" API payloads have the following format.

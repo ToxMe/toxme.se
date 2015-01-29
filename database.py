@@ -194,6 +194,22 @@ class Database(object):
         ex = sess.query(User).filter_by(public_key=id).first()
         return sess, ex
 
+    def get_by_id(self, id, sess=None):
+        sess = sess or self.gs()
+        id = id.upper()
+        pkey = id[0:64]
+        nospam = id[64:72]
+        checksum = id[72:76]
+
+        ex = sess.query(User).filter_by(public_key=pkey).first()
+        u = StaleUser(ex) if ex else None
+        sess.close()
+        print (u.privacy)
+        if u.pin == nospam and u.checksum == checksum and u.privacy == 1:
+            return u
+        else:
+            return None
+
     def get_page_ig(self, num, length, sess=None):
         sess = sess or self.gs()
         ex = (sess.query(User).filter(User.privacy > 0).order_by(User.timestamp.desc())

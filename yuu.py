@@ -41,8 +41,9 @@ ACTION_PUBLISH   = 1
 ACTION_UNPUBLISH = 2
 ACTION_LOOKUP    = 3
 ACTION_STATUS    = 4
+ACTION_RLOOKUP    = 5
 INVOKABLE_ACTIONS = {ACTION_PUBLISH, ACTION_UNPUBLISH, ACTION_LOOKUP,
-                     ACTION_STATUS}
+                     ACTION_STATUS, ACTION_RLOOKUP}
 THROTTLE_THRESHOLD = 13
 
 VALID_KEY = re.compile(r"^[A-Fa-f0-9]{64}$")
@@ -380,6 +381,44 @@ class APILookupID(tornado.web.RequestHandler):
         else:
             self.settings["lookup_core"].dispatch_lookup(name, self._results)
 
+class APILookupName(tornado.web.RequestHandler):
+    def initialize(self, envelope):
+        self.envelope = envelope
+
+    def _results(self, result):
+        self.set_status(200 if result["c"] == 0 else 400)
+        self.write(result)
+        self.finish()
+
+    def _build_local_result(self, id):
+        rec = self.settings["local_store"].get_by_id(id)
+        if not rec:
+            return error_codes.ERROR_NO_USER
+        base_ret = {
+            "c": 0,
+            "name": rec.name,
+        }
+        return base_ret
+
+    @tornado.web.asynchronous
+    def post(self):
+        id = self.envelope.get("id").lower()
+        if not id:
+            self.set_status(400)
+            self.write(error_codes.ERROR_BAD_PAYLOAD)
+            LOGGER.warn("ID unknown")
+            self.finish()
+            return
+        else:
+            if len(id) != 76:
+                self.set_status(400)
+                self.write(error_codes.ERROR_INVALID_ID)
+                LOGGER.warn("ID unknown")
+                self.finish()
+                return
+            self._results(self._build_local_result(id))
+            return
+
 class APIStatus(tornado.web.RequestHandler):
     def initialize(self, envelope):
         self.envelope = envelope
@@ -440,6 +479,8 @@ def _make_handler_for_api_method(application, request, **kwargs):
         return APILookupID(application, request, envelope=envelope)
     elif action == ACTION_STATUS:
         return APIStatus(application, request, envelope=envelope)
+    elif action == ACTION_RLOOKUP:
+        return APILookupName(application, request, envelope=envelope)
 
 class PublicKey(tornado.web.RequestHandler):
     def get(self):
