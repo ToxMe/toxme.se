@@ -62,6 +62,8 @@ SIGNATURE_ENC = nacl.encoding.Base64Encoder
 KEY_ENC = nacl.encoding.HexEncoder
 STORE_ENC = nacl.encoding.HexEncoder
 
+SECURE_MODE = 1
+
 class CryptoCore(object):
     def __init__(self):
         """Load or initialize crypto keys."""
@@ -455,8 +457,9 @@ class APIFailure(APIHandler):
         return
 
 def _make_handler_for_api_method(application, request, **kwargs):
-    if request.protocol != "https":
-        return HTTPSPolicyEnforcer(application, request, **kwargs)
+    if SECURE_MODE:
+        if request.protocol != "https":
+            return HTTPSPolicyEnforcer(application, request, **kwargs)
 
     if request.method != "POST":
         return APIFailure(application, request, **kwargs)
@@ -484,13 +487,20 @@ def _make_handler_for_api_method(application, request, **kwargs):
 
 class PublicKey(tornado.web.RequestHandler):
     def get(self):
-        if self.request.protocol != "https":
-            self.write(error_codes.ERROR_NOTSECURE)
+        if SECURE_MODE:
+            if self.request.protocol != "https":
+                self.write(error_codes.ERROR_NOTSECURE)
+            else:
+                self.write({
+                    "c": 0,
+                    "key": self.settings["crypto_core"].public_key
+                })
         else:
             self.write({
                 "c": 0,
                 "key": self.settings["crypto_core"].public_key
             })
+
 
 class CreateQR(tornado.web.RequestHandler):
     def _fail(self):
@@ -498,9 +508,10 @@ class CreateQR(tornado.web.RequestHandler):
         return
 
     def get(self, path_id):
-        if self.request.protocol != "https":
-            self.write(error_codes.ERROR_NOTSECURE)
-            return
+        if SECURE_MODE:
+            if self.request.protocol != "https":
+                self.write(error_codes.ERROR_NOTSECURE)
+                return
         name = (parse.unquote(path_id) if path_id else "").lower()
         if not name or not set(name).isdisjoint(DISALLOWED_CHARS):
             return self._fail()
@@ -542,9 +553,10 @@ class LookupAndOpenUser(tornado.web.RequestHandler):
         self.render("lookup_home.html")
 
     def get(self, path_id=None):
-        if self.request.protocol != "https":
-            self.write(error_codes.ERROR_NOTSECURE)
-            return
+        if SECURE_MODE:
+            if self.request.protocol != "https":
+                self.write(error_codes.ERROR_NOTSECURE)
+                return
         name = (parse.unquote(path_id) if path_id else "").lower()
         if name:
             return self._render_open_user(name)
@@ -568,9 +580,10 @@ class FindFriends(tornado.web.RequestHandler):
                     previous_page=(num - 1) if num > 0 else None)
 
     def get(self, page):
-        if self.request.protocol != "https":
-            self.write(error_codes.ERROR_NOTSECURE)
-            return
+        if SECURE_MODE:
+            if self.request.protocol != "https":
+                self.write(error_codes.ERROR_NOTSECURE)
+                return
 
         return self._render_page(page)
 
@@ -578,15 +591,17 @@ class EditKeyWeb(APIHandler):
     RETURNS_JSON = 0
 
     def get(self):
-        if self.request.protocol != "https":
-            self.json_payload(error_codes.ERROR_NOTSECURE)
-            return
+        if SECURE_MODE:
+            if self.request.protocol != "https":
+                self.json_payload(error_codes.ERROR_NOTSECURE)
+                return
         self.render("edit_ui.html")
 
     def post(self):
-        if self.request.protocol != "https":
-            self.json_payload(error_codes.ERROR_NOTSECURE)
-            return
+        if SECURE_MODE:
+            if self.request.protocol != "https":
+                self.json_payload(error_codes.ERROR_NOTSECURE)
+                return
 
         if self.settings["address_ctr"]:
             ctr = self.settings["address_ctr"][ACTION_PUBLISH]
@@ -652,15 +667,17 @@ class AddKeyWeb(APIHandler):
     RETURNS_JSON = 0
 
     def get(self):
-        if self.request.protocol != "https":
-            self.json_payload(error_codes.ERROR_NOTSECURE)
-            return
+        if SECURE_MODE:
+            if self.request.protocol != "https":
+                self.json_payload(error_codes.ERROR_NOTSECURE)
+                return
         self.render("add_ui.html")
 
     def post(self):
-        if self.request.protocol != "https":
-            self.json_payload(error_codes.ERROR_NOTSECURE)
-            return
+        if SECURE_MODE:
+            if self.request.protocol != "https":
+                self.json_payload(error_codes.ERROR_NOTSECURE)
+                return
 
         if self.settings["address_ctr"]:
             ctr = self.settings["address_ctr"][ACTION_PUBLISH]
@@ -729,6 +746,8 @@ class AddKeyWeb(APIHandler):
         return
 
 def main():
+    global SECURE_MODE
+
     with open("config.json", "r") as config_file:
         cfg = json.load(config_file)
 
@@ -808,6 +827,16 @@ def main():
             LOGGER.info("suid key exists in config, but not running as root. "
                         "Exiting.")
             sys.exit()
+
+    if "secure" in cfg:
+        opt = cfg['secure']
+
+        if type(opt) != int:
+            LOGGER.info("Invalid secure mode option")
+            sys.exit()
+        else:
+            SECURE_MODE = opt
+    LOGGER.info("secure mode is " + str(SECURE_MODE))
 
     local_store.late_init()
 
