@@ -608,6 +608,7 @@ class EditKeyWeb(APIHandler):
 
             if ctr["counter"][self.request.remote_ip] > THROTTLE_THRESHOLD:
                 self.set_status(400)
+                self.json_payload(error_codes.ERROR_RATE_LIMIT)
                 return
 
         name = self.get_body_argument("name", "").lower()
